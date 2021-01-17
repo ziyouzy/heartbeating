@@ -14,33 +14,33 @@ import (
 	go_logger "github.com/phachon/go-logger"
 )
 
-var Logger &go_logger.Logger
+var Logger *go_logger.Logger
 
 func Log(){
-	logger = go_logger.NewLogger()
+	Logger = go_logger.NewLogger()
 
 	/** 在这里设定异步方式
 	 * 程序结束前必须调用 Flush
 	 * 已简单实现了析构函数LogFlush()
 	 */
-	logger.SetAsync()
+	Logger.SetAsync()
 
 	/** 由于准备设置多个输出
 	 * 需要先拆卸默认的"console"适配器
 	 * 然后自定义新的适合多个输出场景的新“console”适配器
 	 * 同时还需要自定义好诸如"file"等适配器，一并重新装载
 	 */
-	logger.Detach("console")
+	Logger.Detach("console")
 
 
 	// 新命令行输出配置
-	onsoleConfig := &go_logger.ConsoleConfig{
+	consoleConfig := &go_logger.ConsoleConfig{
         Color: true, // 命令行输出字符串是否显示颜色
         JsonFormat: true, // 命令行输出字符串是否格式化
         Format: "", // 如果输出的不是 json 字符串，JsonFormat: false, 自定义输出的格式
     }
     // 添加 console 为 logger 的一个输出
-    logger.Attach("console", go_logger.LOGGER_LEVEL_DEBUG, consoleConfig)
+    Logger.Attach("console", go_logger.LOGGER_LEVEL_DEBUG, consoleConfig)
 
 
     // 文件输出配置
@@ -51,9 +51,9 @@ func Log(){
 		 * 请配置LealFrimeNem参数
 		 */
         LevelFileName : map[int]string {
-            logger.LoggerLevel("error"): "./error.log",    // Error 级别日志被写入 error .log 文件
-            logger.LoggerLevel("info"): "./info.log",      // Info 级别日志被写入到 info.log 文件中
-            logger.LoggerLevel("debug"): "./debug.log",    // Debug 级别日志被写入到 debug.log 文件中
+            Logger.LoggerLevel("error"): "./error.log",    // Error 级别日志被写入 error .log 文件
+            Logger.LoggerLevel("info"): "./info.log",      // Info 级别日志被写入到 info.log 文件中
+            Logger.LoggerLevel("debug"): "./debug.log",    // Debug 级别日志被写入到 debug.log 文件中
 		},
 		
         MaxSize : 1024 * 1024,  // 文件最大值（KB），默认值0不限
@@ -68,9 +68,9 @@ func Log(){
 
 	}	
     // 添加 file 为 logger 的一个输出
-    logger.Attach("file", go_logger.LOGGER_LEVEL_DEBUG, fileConfig)
+    Logger.Attach("file", go_logger.LOGGER_LEVEL_DEBUG, fileConfig)
 }
 
 func LogFlush(){
-	logger.Flush()
+	Logger.Flush()
 }

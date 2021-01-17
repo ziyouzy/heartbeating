@@ -1,7 +1,11 @@
 package conf
 
+import (
+	"heartbeating/log"
+)
+
 
 
 func Conf(){
-	Log()
+	log.Log()
 }
