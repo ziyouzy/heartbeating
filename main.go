@@ -6,7 +6,7 @@ import (
 
 
 func main(){
-	defer LogFlush()
-	Conf()
-	
+	defer heartbeating.LogFlush()
+	heartbeating.Conf()
+
 }

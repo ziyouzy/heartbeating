@@ -7,7 +7,7 @@
 
 /* Detach->拆卸		Attach->装配 */
 
-package heartbeating
+package log
 
 
 import (
