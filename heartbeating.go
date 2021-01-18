@@ -1,4 +1,4 @@
-package main
+package heartbeating
 
 import (
 	"heartbeating/conf"
@@ -6,7 +6,7 @@ import (
 )
 
 
-func main(){
+func HeartBeating(){
 	defer log.LogFlush()
 	conf.Conf()
 
