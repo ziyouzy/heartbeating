@@ -13,3 +13,15 @@
 第二种是针对有能力实现慢哈希md5+时间戳+盐客户端，相关介绍可看如下文章:  
 https://www.cnblogs.com/zhangchengye/p/6323409.html
 
+# 关于日志系统  
+使用了github.com/phachon/go-logger
+超级好用，努力做好集成
+
+# 关于测试单元  
+这次开始使用testing测试单元进行代码的调试，而不是和以前那样go build了  
+过程中遇到了cgo找不到的问题，似乎已经找到了方法
+
+# 关于长连接  
+这有篇文章不错，如果之后有更值得借鉴的文章会在这里补充
+https://blog.csdn.net/zhizhengguan/article/details/108026066
+
