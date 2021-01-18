@@ -22,6 +22,6 @@ https://www.cnblogs.com/zhangchengye/p/6323409.html
 过程中遇到了cgo找不到的问题，似乎已经找到了方法
 
 # 关于长连接  
-这有篇文章不错，如果之后有更值得借鉴的文章会在这里补充
+这有篇文章不错，如果之后有更值得借鉴的文章会在这里补充  
 https://blog.csdn.net/zhizhengguan/article/details/108026066
 
