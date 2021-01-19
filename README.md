@@ -26,7 +26,16 @@ https://www.cnblogs.com/zhangchengye/p/6323409.html
 
 # 关于长连接  
 这有篇文章不错，如果之后有更值得借鉴的文章会在这里补充  
-https://blog.csdn.net/zhizhengguan/article/details/108026066
+https://blog.csdn.net/zhizhengguan/article/details/108026066  
+这里有另一篇实现心跳的文章:  
+https://my.oschina.net/sharelinux/blog/699725  
+两篇文章套路是不同的  
+前者采用了:  
+    客户端主逻辑函数拿到数据->将数据传入一个心跳管道->心跳管道和当前conn一起传入心跳逻辑函数->心跳逻辑函数内SetDeadline()  
+后者则是：  
+    客户端主逻辑函数拿到数据->主逻辑函数将除listen之外的逻辑都抽象成函数handler()  
+    handler函数内再将读抽象成rhandler，写抽象成whandler，而rhandler内用到了SetDeadline()  
+两者都值得借鉴，而我需要做的是将心跳功能抽离出来
 
 # 心跳包只是心跳包  
 要明白一件事，那就是心跳包仅仅是某个项目整体套接字逻辑的一个组件  
