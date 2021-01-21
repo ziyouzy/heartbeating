@@ -7,5 +7,5 @@ import (
 
 func TestStartBeating(t *testing.T) {
 	fmt.Println("start test")
-	//HeartBeating()
+	HeartBeating()
 }
