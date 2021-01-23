@@ -58,16 +58,16 @@ https://my.oschina.net/sharelinux/blog/699725
 	vc := reflect.ValueOf(consoleConfig)
 	cc := vc.Interface().(*ConsoleConfig)
 	adapterConsole.config = cc
-    
-    
-    
-    
-    
-***
-
-
-
-
+      
+      
+      
+      
+      
+***  
+  
+  
+  
+  
 # 准备借鉴go-logger  
 go-logger整体的设计思路似乎是适配器模式“adapter”  
 主体的骨架是logger.go，各个适配器分别位于console.go、file.go等  
