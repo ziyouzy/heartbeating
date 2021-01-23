@@ -58,14 +58,10 @@ https://my.oschina.net/sharelinux/blog/699725
 	vc := reflect.ValueOf(consoleConfig)
 	cc := vc.Interface().(*ConsoleConfig)
 	adapterConsole.config = cc
-      
-      
-      
-      
-      
-***  
-  
-  
+***      
+***
+***
+***
   
   
 # 准备借鉴go-logger  
