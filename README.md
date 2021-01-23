@@ -52,16 +52,15 @@ https://my.oschina.net/sharelinux/blog/699725
 go-logger整体的设计思路似乎是适配器模式“adapter”  
 主体的骨架是logger.go，各个适配器分别位于console.go、file.go等  
 
-首先需要留意的是logger.go 50~60行的Regiser函数，他会在每个适配器对象的.go文件的最后一行被调用  
-    func Register(adapterName string, newLog adapterLoggerFunc) {  
-	    if adapters[adapterName] != nil {  
-		    panic("logger: logger adapter " + adapterName + " already registered!")  
-	    }  
-	    if newLog == nil {  
-		    panic("logger: logger adapter " + adapterName + " is nil!")  
-	    }  
-
-	    adapters[adapterName] = newLog  
+首先需要留意的是logger.go 50~60行的Regiser函数，他会在每个适配器对象的.go文件的最后一行被调用
+    func Register(adapterName string, newLog adapterLoggerFunc) {
+        if adapters[adapterName] != nil {
+	    panic("logger: logger adapter " + adapterName + " already registered!")
+	}
+	if newLog == nil {
+	    panic("logger: logger adapter " + adapterName + " is nil!")
+	}	    
+	adapters[adapterName] = newLog
     }  
   
 他的作用和logger.go 105~115行的Attach方法是有很大区别的：  
