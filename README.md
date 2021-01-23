@@ -60,7 +60,13 @@ https://my.oschina.net/sharelinux/blog/699725
 	adapterConsole.config = cc
     
     
+    
+    
+    
 ***
+
+
+
 
 # 准备借鉴go-logger  
 go-logger整体的设计思路似乎是适配器模式“adapter”  
