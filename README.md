@@ -62,7 +62,7 @@ go-logger整体的设计思路似乎是适配器模式“adapter”
 	    		panic("logger: logger adapter " + adapterName + " is nil!")
 		}	    
 		adapters[adapterName] = newLog
-    	}  
+	}  
   
 他的作用和logger.go 105~115行的Attach方法是有很大区别的:
 
@@ -71,7 +71,7 @@ go-logger整体的设计思路似乎是适配器模式“adapter”
 	    	defer logger.lock.Unlock()  
 
 	    	return logger.attach(adapterName, level, config)  
-    	}  
+	}  
 
 前者的作用是包自身的初始化操作  
 包自身的逻辑需要先把console、file等适配器实例化并装入整体逻辑  
