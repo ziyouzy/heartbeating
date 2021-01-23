@@ -144,6 +144,7 @@ adapterLoggerFunc是函数数据类型，通过type转化为新的实体，从�
 在func() LoggerAbstract这种函数类型的内部（如NewAdapterConsole() LoggerAbstract）
 不同的迭代器会把与其对应的迭代器结构类返回  
 这是这种设计模式的意义所在：**  
+
 console.go对应NewAdapterConsole()LoggerAbstract对应&AdapterConsole{}   
 file.go对应NewAdapterFile()LoggerAbstract对应&AdapterFile{}  
 api.go对应NewAdapterApi()LoggerAbstract对应&AdapterApi{}  
@@ -169,3 +170,230 @@ api.go对应NewAdapterApi()LoggerAbstract对应&AdapterApi{}
 
     var adapters = make(map[string]adapterLoggerFunc)  
 
+这两个类型都存在于logger.go（程序主逻辑中），他们是各个适配器与主逻辑协调运作的桥梁：  
+
+	type adapterLoggerFunc func() LoggerAbstract
+
+	type LoggerAbstract interface {
+		Name() string
+		Init(config Config) error
+		Write(loggerMsg *loggerMessage) error
+		Flush()
+	}
+
+实现LoggerAbstract是在各个迭代器文件里的结构类  
+实现func() LoggerAbstract以及其别名adapterLoggerFunc是在各个迭代器文件里的New函数  
+真正实例化迭代器的操作存在于logger.go文件的115~155行的attach方法：   
+
+	func (logger *Logger) attach(adapterName string, level int, config Config) error {
+		for _, output := range logger.outputs {
+			if output.Name == adapterName {
+				printError("logger: adapter " + adapterName + "already attached!")
+			}
+		}
+		logFun, ok := adapters[adapterName]
+		if !ok {
+			printError("logger: adapter " + adapterName + "is nil!")
+		}
+		adapterLog := logFun()
+		err := adapterLog.Init(config)
+		if err != nil {
+			printError("logger: adapter " + adapterName + " init failed, error: " + err.Error())
+		}
+
+		output := &outputLogger{
+			Name:           adapterName,
+			Level:          level,
+			LoggerAbstract: adapterLog,
+		}
+
+		logger.outputs = append(logger.outputs, output)
+		return nil
+	}
+	
+其中的logFun, ok := adapters[adapterName]可以像取出一个变量一样取出一个函数数据类型  
+然后adapterLog := logFun()才是真正执行了这个函数，从而拿到一个LoggerAbstract接口，等同于拿到了某个适配器的结构类  
+**虽然也可以在进行Register等操作时直接难道adapterLog，或许是为了节省资源才这么设计的：**  
+
+	var adapters = make(map[string]adapterLoggerFunc)也需要改成var adapters = make(map[string]LoggerAbstract)  
+	
+**这样的设计模式是耗费资源的，因为缓存里会存在所有的适配器结构类对象实体**  
+
+**而detach采用的不是从现有logger.outputs（map）移除某个适配器，而是创建新map，替换掉旧的：**
+
+	func (logger *Logger) detach(adapterName string) error {
+		outputs := []*outputLogger{}
+		for _, output := range logger.outputs {
+			if output.Name == adapterName {
+				continue
+			}
+			outputs = append(outputs, output)
+		}
+		logger.outputs = outputs
+		return nil
+	}
+	
+**现在是全新的知识点：**
+
+	adapterLog := logFun()
+	err := adapterLog.Init(config)
+
+在attach方法内部会对各个适配器进行真正的初始化，参数只有一个，是个名为config的接口类型，本以为这个接口里会包含很多方法标签，但是错了，在config.go中只有：  
+
+	package go_logger
+
+	// logger config interface
+	type Config interface {
+		Name() string
+	}
+	
+于是还是重点看看"适配器.Init()"这个方法吧： 
+
+	func (adapterConsole *AdapterConsole) Init(consoleConfig Config) error {
+		if consoleConfig.Name() != CONSOLE_ADAPTER_NAME {
+			return errors.New("logger console adapter init error, config must ConsoleConfig")
+		}
+
+		vc := reflect.ValueOf(consoleConfig)
+		cc := vc.Interface().(*ConsoleConfig)
+		adapterConsole.config = cc
+
+		if cc.JsonFormat == false && cc.Format == "" {
+			cc.Format = defaultLoggerMessageFormat
+		}
+
+		return nil
+	}
+	
+**大佬用了反射，这难道就是反射的正确使用场景吗**  
+
+还是先学习下consoleConfig吧，毕竟这个最简单:  
+
+	type ConsoleConfig struct {
+		// console text is show color
+		Color bool
+
+		// is json format
+		JsonFormat bool
+
+		// jsonFormat is false, please input format string
+		// if format is empty, default format "%millisecond_format% [%level_string%] %body%"
+		//
+		//  Timestamp "%timestamp%"
+		//	TimestampFormat "%timestamp_format%"
+		//	Millisecond "%millisecond%"
+		//	MillisecondFormat "%millisecond_format%"
+		//	Level int "%level%"
+		//	LevelString "%level_string%"
+		//	Body string "%body%"
+		//	File string "%file%"
+		//	Line int "%line%"
+		//	Function "%function%"
+		//
+		// example: format = "%millisecond_format% [%level_string%] %body%"
+		Format string
+	}
+	
+还是用fileConfig对比着看吧：
+
+	type FileConfig struct {
+
+		// log filename
+		Filename string
+
+		// level log filename
+		LevelFileName map[int]string
+
+		// max file size
+		MaxSize int64
+
+		// max file line
+		MaxLine int64
+
+		// file slice by date
+		// "y" Log files are cut through year
+		// "m" Log files are cut through mouth
+		// "d" Log files are cut through day
+		// "h" Log files are cut through hour
+		DateSlice string
+
+		// is json format
+		JsonFormat bool
+
+		// jsonFormat is false, please input format string
+		// if format is empty, default format "%millisecond_format% [%level_string%] %body%"
+		//
+		//  Timestamp "%timestamp%"
+		//	TimestampFormat "%timestamp_format%"
+		//	Millisecond "%millisecond%"
+		//	MillisecondFormat "%millisecond_format%"
+		//	Level int "%level%"
+		//	LevelString "%level_string%"
+		//	Body string "%body%"
+		//	File string "%file%"
+		//	Line int "%line%"
+		//	Function "%function%"
+		//
+		// example: format = "%millisecond_format% [%level_string%] %body%"
+		Format string
+	}
+	
+基本上都是简单数据类型，切片已经算是最复杂的数据结构了，同时初始的状态他们的内部所有字段没有赋任何值，赋值的操作存在于各个“适配器.go”的“适配器.Init(适配器Config Config))方法  
+同时这个方法的参数表并不是各个config的结构类，而是实现结构类的接口  
+他的外层是func (logger *Logger) attach(adapterName string, level int, config Config) error {}  
+**config接口作为参数一直会传递到最内部**
+
+回到反射这个事，其实用法也并不复杂：  
+
+	vc := reflect.ValueOf(consoleConfig)
+	cc := vc.Interface().(*ConsoleConfig)
+	adapterConsole.config = cc
+
+基本上可以理解成json的序列化与反序列化的操作consoleConfig以接口形式传进来  
+其真正的模板就是ConsoleConfig结构类，类内部也都是golang内置的数据类型，最复杂的也就是个切片  
+反序列化过程很安全，cc已经是个有效的结构类了，里面各个字段都已经是有具体值的了  
+
+**至此，接下来该去研究具体怎么使用log了，也就是适配器结构类的Write()这些方法：**  
+设计到的核心结构类为下面两个：
+
+	// adapter console
+	type AdapterConsole struct {
+		write  *ConsoleWriter
+		config *ConsoleConfig
+	}
+
+	// console writer
+	type ConsoleWriter struct {
+		lock   sync.Mutex
+		writer io.Writer
+	}
+	
+后者扮演了前者内置字段的角色，同时io.Writer的功能其实就是命令行输出  
+AdapterConsole的Write方法是此包的功能核心最具代表性的内容：  
+
+    func (adapterConsole *AdapterConsole) Write(loggerMsg *loggerMessage) error {
+
+	msg := ""
+	if adapterConsole.config.JsonFormat == true {
+		//jsonByte, _ := json.Marshal(loggerMsg)
+		jsonByte, _ := loggerMsg.MarshalJSON()
+		msg = string(jsonByte)
+	} else {
+		msg = loggerMessageFormat(adapterConsole.config.Format, loggerMsg)
+	}
+	consoleWriter := adapterConsole.write
+
+	if adapterConsole.config.Color {
+		colorAttr := adapterConsole.getColorByLevel(loggerMsg.Level, msg)
+		consoleWriter.lock.Lock()
+		color.New(colorAttr).Println(msg)
+		consoleWriter.lock.Unlock()
+		return nil
+	}
+
+	consoleWriter.lock.Lock()
+	consoleWriter.writer.Write([]byte(msg + "\n"))
+	consoleWriter.lock.Unlock()
+
+	return nil
+    }
