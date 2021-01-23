@@ -48,6 +48,20 @@ https://my.oschina.net/sharelinux/blog/699725
 同样的组件还有客户端管理组件、以及之前所说的加密，其实也应该是属于整体套接字的组件，而不是心跳包的组件  
 这里只实现心跳包，其他的都不去实现
 
+# 不能完全照搬go-logger的设计模式  
+**从go-logger各个迭代器都需要实现LoggerAbstract接口这一点来看，“心跳包适配器”所包含的功能方法或许不会被之后可能会去设计的“crc校验适配器”、“读取解码适配器”、“发送加密适配器”等在功能上发生重叠**
+**说白了，他们并不回去搞同一类型的事，以至于在设计逻辑上没有足够的理由让这些模块去实现同一个接口**  
+唯一值得借鉴的只是attach这个方法，~~以及他的参数表~~（参数表不值得借鉴，值得借鉴的是他通过反射拿到config结构类实体的这种技巧）：  
+    
+	func (logger *Logger) Attach(adapterName string, level int, config Config) error {  }
+    
+	vc := reflect.ValueOf(consoleConfig)
+	cc := vc.Interface().(*ConsoleConfig)
+	adapterConsole.config = cc
+    
+    
+***
+
 # 准备借鉴go-logger  
 go-logger整体的设计思路似乎是适配器模式“adapter”  
 主体的骨架是logger.go，各个适配器分别位于console.go、file.go等  
