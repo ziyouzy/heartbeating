@@ -52,7 +52,7 @@ https://my.oschina.net/sharelinux/blog/699725
 go-logger整体的设计思路似乎是适配器模式“adapter”  
 主体的骨架是logger.go，各个适配器分别位于console.go、file.go等  
 
-首先需要留意的是logger.go 50~60行的Regiser函数，他会在每个适配器对象的.go文件的最后一行被调用
+首先需要留意的是logger.go 50~60行的Regiser函数，他会在每个适配器对象的.go文件的最后一行被调用  
     func Register(adapterName string, newLog adapterLoggerFunc) {
 	    if adapters[adapterName] != nil {
 		    panic("logger: logger adapter " + adapterName + " already registered!")
@@ -64,7 +64,7 @@ go-logger整体的设计思路似乎是适配器模式“adapter”
 	    adapters[adapterName] = newLog
     }
   
-他的作用和logger.go 105~115行的Attach方法是有很大区别的：
+他的作用和logger.go 105~115行的Attach方法是有很大区别的：  
     func (logger *Logger) Attach(adapterName string, level int, config Config) error {
 	    logger.lock.Lock()
 	    defer logger.lock.Unlock()
@@ -77,30 +77,30 @@ go-logger整体的设计思路似乎是适配器模式“adapter”
 之后用户才能自己通过Attach方法自己选择使用哪几个适配器  
 就好比玩游戏时先要把不同的道具放入背包，玩家在打野时在针对不同的环境再去把道具装配在身上  
 
-console.go对应并实现了console适配器，在末尾行存在：
+console.go对应并实现了console适配器，在末尾行存在：  
     func init() {
 	    Register(CONSOLE_ADAPTER_NAME, NewAdapterConsole)
     }
       
-file.go对应并实现了file适配器，在末尾行存在：
+file.go对应并实现了file适配器，在末尾行存在：  
     func init() {
 	    Register(FILE_ADAPTER_NAME, NewAdapterFile)
     }
     
-api.go对应并实现了api适配器，在末尾行存在：
+api.go对应并实现了api适配器，在末尾行存在：  
     func init() {
 	    Register(API_ADAPTER_NAME, NewAdapterApi)
     }
     
 这几个init都是为了让适配器可以被直接使用，同时也是为了方便用户设计自己的适配器  
 
-而Register的过程也并不复杂，在logger.go里最在一个适配器的缓存:
+而Register的过程也并不复杂，在logger.go里最在一个适配器的缓存:  
    var adapters = make(map[string]adapterLoggerFunc)
-Register的作用其实就是往这个缓存里添加适配器对象
-**同时在这里也可以明确，适配器的对象就是以adapterLoggerFunc存在的**  
+Register的作用其实就是往这个缓存里添加适配器对象  
+**同时在这里也可以明确，适配器的对象就是以adapterLoggerFunc存在的**    
 而之后的Attach方法的核心功能只是告诉模块需要激活、需要真正用到哪个适配器，并为这个适配器设置好参数  
 
-adapterLoggerFunc是函数数据类型，通过type转化为新的实体，从而能为其设计方法，而这个函数类型是如下所示的样子：
+adapterLoggerFunc是函数数据类型，通过type转化为新的实体，从而能为其设计方法，而这个函数类型是如下所示的样子：  
     func NewAdapterConsole() LoggerAbstract {
 	    consoleWrite := &ConsoleWriter{
 		    writer: os.Stdout,
@@ -112,10 +112,10 @@ adapterLoggerFunc是函数数据类型，通过type转化为新的实体，从�
 	    }
     }
   
-然后在logger.go中对其进行type：
+然后在logger.go中对其进行type：  
     type adapterLoggerFunc func() LoggerAbstract
 
-其中，NewAdapterConsole() LoggerAbstract{...}是一个数据类型为func() LoggerAbstract的值,**他返回的是一个接口**其实是可以进行这样的操作的（不过没有太大必要）:
+其中，NewAdapterConsole() LoggerAbstract{...}是一个数据类型为func() LoggerAbstract的值,**他返回的是一个接口**其实是可以进行这样的操作的（不过没有太大必要）:  
     f :=func NewAdapterConsole() LoggerAbstract {
 	    consoleWrite := &ConsoleWriter{
 		    writer: os.Stdout,
@@ -142,18 +142,18 @@ api.go对应NewAdapterApi()LoggerAbstract对应&AdapterApi{}
 
 如下又是另一套完整的设计思路，如果把两者混为一滩就很难理清思路了：  
 由于各个“New”开头的函数都属于“func() LoggerAbstract”这一函数类型  
-因此是可以试下这样的操作的:
+因此是可以试下这样的操作的:  
     func (f func() LoggerAbstract)string{
         la :=f()
         _ =la
     }(NewAdapterConsole())  
 
-于是直接type adapterLoggerFunc func() LoggerAbstract，其实就是为了方便而做了一下替换：
+于是直接type adapterLoggerFunc func() LoggerAbstract，其实就是为了方便而做了一下替换：  
     func (f adapterLoggerFunc)string{
         la :=f()
         _ =la
     }(NewAdapterConsole())  
 目前看来仅仅是替换，因为在logger.go的源代码中，虽然可以，但是并没有发现任何为adapterLoggerFunc这个新类型设计了任何方法  
-最终通过Register（）函数放入了这个map里：
+最终通过Register（）函数放入了这个map里：  
     var adapters = make(map[string]adapterLoggerFunc)
 
