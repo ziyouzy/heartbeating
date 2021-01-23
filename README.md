@@ -74,9 +74,10 @@ go-logger整体的设计思路似乎是适配器模式“adapter”
 	}  
 
 前者的作用是包自身的初始化操作  
-包自身的逻辑需要先把console、file等适配器实例化并装入整体逻辑  
+~~包自身的逻辑需要先把console、file等适配器实例化并装入整体逻辑~~不是转入实例化所得的结构类或实现它的接口，而是实现实例化所需的“函数数据类型”  
 之后用户才能自己通过Attach方法自己选择使用哪几个适配器  
 就好比玩游戏时先要把不同的道具放入背包，玩家在打野时在针对不同的环境再去把道具装配在身上  
+**补充：Attach方法内会真正去执行所需要的“函数数据类型”，从而拿到各个实体，这种设计模式是为了节省资源**   
 
 console.go对应并实现了console适配器，在末尾行存在：  
 
@@ -104,9 +105,9 @@ api.go对应并实现了api适配器，在末尾行存在：
    
 Register的作用其实就是往这个缓存里添加适配器对象  
 **同时在这里也可以明确，适配器的对象就是以adapterLoggerFunc存在的**    
-而之后的Attach方法的核心功能只是告诉模块需要激活、需要真正用到哪个适配器，并为这个适配器设置好参数  
+而之后的Attach方法的核心功能只是告诉模块需要激活、需要真正用到哪个适配器，**并为这个适配器设置好参数**  
 
-adapterLoggerFunc是函数数据类型，通过type转化为新的实体，从而能为其设计方法，而这个函数类型是如下所示的样子：  
+adapterLoggerFunc是函数数据类型，通过type转化为新的实体，~~从而能为其设计方法~~(但是并没有设计方法)，而这个函数类型是如下所示的样子：  
 
     func NewAdapterConsole() LoggerAbstract {  
 	    consoleWrite := &ConsoleWriter{  
@@ -123,7 +124,7 @@ adapterLoggerFunc是函数数据类型，通过type转化为新的实体，从�
 
     type adapterLoggerFunc func() LoggerAbstract  
 
-其中，NewAdapterConsole() LoggerAbstract{...}是一个数据类型为func() LoggerAbstract的值,**他返回的是一个接口**其实是可以进行这样的操作的（不过没有太大必要）:  
+其中，NewAdapterConsole() LoggerAbstract{...}是一个数据类型为func() LoggerAbstract的值,**他返回的是一个接口**~~其实是可以进行这样的操作的~~（没有太大必要）:  
 
     f :=func NewAdapterConsole() LoggerAbstract {  
 	    consoleWrite := &ConsoleWriter{  
@@ -135,23 +136,24 @@ adapterLoggerFunc是函数数据类型，通过type转化为新的实体，从�
 		    config: config,  
 	    }  
     }  
-    myadapter :=(adapterLoggerFunc)f  
+    myadapter :=(adapterLoggerFunc)f 
       
-回到正题Register其实是用到了很多函数类型的类型转换特性，从而把NewAdapterConsole()、NewAdapterFile（）、NewAdapterApi（）这样的函数转化成实体再利用实体的接口特性，把这3个“函数”转化成真正意义上的同一种数据类型  
+~~回到正题Register其实是用到了很多函数类型的类型转换特性，从而把NewAdapterConsole()、NewAdapterFile（）、NewAdapterApi（）这样的函数转化成实体再利用实体的接口特性，把这3个“函数”转化成真正意义上的同一种数据类型~~这句话的逻辑实在混乱  
 
 **或者说，每个迭代器的源代码里定义了全局形式的原始的函数，而这个函数的数据类型是func() LoggerAbstract  
-其中LoggerAbstract这个数据类型是一个能统一不同迭代器（console、file、api等）通用的接口  
-在func() LoggerAbstract这种函数类型的内部（如NewAdapterConsole() LoggerAbstract）
+其中LoggerAbstract这个数据类型是一个能统一不同迭代器（console、file、api等）通用的接口
+其在之后所接收的是各个迭代器真正的结构类实体，这些实体都会实现这个接口
+也就是说，在func() LoggerAbstract这种函数类型的内部（如NewAdapterConsole() LoggerAbstract）
 不同的迭代器会把与其对应的迭代器结构类返回  
 这是这种设计模式的意义所在：**  
 
-console.go对应NewAdapterConsole()LoggerAbstract对应&AdapterConsole{}   
-file.go对应NewAdapterFile()LoggerAbstract对应&AdapterFile{}  
-api.go对应NewAdapterApi()LoggerAbstract对应&AdapterApi{}  
+console.go对应NewAdapterConsole()LoggerAbstract对应&AdapterConsole{}结构类实体   
+file.go对应NewAdapterFile()LoggerAbstract对应&AdapterFile{}结构类实体  
+api.go对应NewAdapterApi()LoggerAbstract对应&AdapterApi{}结构类实体  
 如上是一套完整的设计思路  
 
-如下又是另一套完整的设计思路，如果把两者混为一滩就很难理清思路了：  
-由于各个“New”开头的函数都属于“func() LoggerAbstract”这一函数类型  
+**如下又是另一套完整的设计思路，如果把两者混为一滩就很难理清思路了：**  
+由于上述各个“New”开头的函数都属于“func() LoggerAbstract”这一函数类型  
 因此是可以试下这样的操作的:  
 
     func (f func() LoggerAbstract)string{  
@@ -165,7 +167,7 @@ api.go对应NewAdapterApi()LoggerAbstract对应&AdapterApi{}
         la :=f()  
         _ =la  
     }(NewAdapterConsole())  
-目前看来仅仅是替换，因为在logger.go的源代码中，虽然可以，但是并没有发现任何为adapterLoggerFunc这个新类型设计了任何方法  
+**目前看来仅仅是替换**，因为在logger.go的源代码中，虽然可以，但是并没有发现任何为adapterLoggerFunc这个新类型设计了任何方法  
 最终通过Register（）函数放入了这个map里：  
 
     var adapters = make(map[string]adapterLoggerFunc)  
@@ -371,29 +373,41 @@ api.go对应NewAdapterApi()LoggerAbstract对应&AdapterApi{}
 后者扮演了前者内置字段的角色，同时io.Writer的功能其实就是命令行输出  
 AdapterConsole的Write方法是此包的功能核心最具代表性的内容：  
 
-    func (adapterConsole *AdapterConsole) Write(loggerMsg *loggerMessage) error {
+	func (adapterConsole *AdapterConsole) Write(loggerMsg *loggerMessage) error {
 
-	msg := ""
-	if adapterConsole.config.JsonFormat == true {
-		//jsonByte, _ := json.Marshal(loggerMsg)
-		jsonByte, _ := loggerMsg.MarshalJSON()
-		msg = string(jsonByte)
-	} else {
-		msg = loggerMessageFormat(adapterConsole.config.Format, loggerMsg)
-	}
-	consoleWriter := adapterConsole.write
+		msg := ""
+		if adapterConsole.config.JsonFormat == true {
+			//jsonByte, _ := json.Marshal(loggerMsg)
+			jsonByte, _ := loggerMsg.MarshalJSON()
+			msg = string(jsonByte)
+		} else {
+			msg = loggerMessageFormat(adapterConsole.config.Format, loggerMsg)
+		}
+		consoleWriter := adapterConsole.write
 
-	if adapterConsole.config.Color {
-		colorAttr := adapterConsole.getColorByLevel(loggerMsg.Level, msg)
+		if adapterConsole.config.Color {
+			colorAttr := adapterConsole.getColorByLevel(loggerMsg.Level, msg)
+			consoleWriter.lock.Lock()
+			color.New(colorAttr).Println(msg)
+			consoleWriter.lock.Unlock()
+			return nil
+		}
+
 		consoleWriter.lock.Lock()
-		color.New(colorAttr).Println(msg)
+		consoleWriter.writer.Write([]byte(msg + "\n"))
 		consoleWriter.lock.Unlock()
+
 		return nil
 	}
-
-	consoleWriter.lock.Lock()
-	consoleWriter.writer.Write([]byte(msg + "\n"))
-	consoleWriter.lock.Unlock()
-
-	return nil
-    }
+	
+主要做了下面两件事：  
+1.合成字符串：  
+  1.创建空msg  
+  2.基于loggerMsg拿到具体的“内容”  
+  3.选择内容的格式是json格式还是普通文本格式
+  4.赋给msg
+2.选择输出方式：  
+  1.基于布尔值adapterConsole.config.Color决定是否进行彩色输出  
+  2.是则结束color包实现彩色输出，否则借助io.writer实现普通输出  
+  
+**主逻辑差不多就是这样，先写这么多**
