@@ -438,4 +438,22 @@ AdapterConsole的Write方法是此包的功能核心最具代表性的内容：
   1.基于布尔值adapterConsole.config.Color决定是否进行彩色输出  
   2.是则结束color包实现彩色输出，否则借助io.writer实现普通输出  
   
+  
+***
+**关于大佬对此包适配器模式的设计思路：**  
+之前思路存在一些误区，现在已经理清了，之前本以为大佬的适配器是“向上兼容”的，而其实不然，设计目的是“向下兼容”  
+比如console.go/AdapterConsole{}结构类，向下兼容了console.go/ConsoleWriter{}结构类  
+与其对应的是file.go/AdapterFile{}结构类，向下兼容了file.go/FileWriter{}  
+真正需要拿来做对比的其实是ConsoleWriter{}与FileWriter{} （以及ApiWrite{}）  
+ConsoleWriter{}根本就没有设计方法，使用的都是其内部字段现成的方法  
+FileWriter{}则拥有：
+
+    func (fw *FileWriter) initFile() error {}
+    func (fw *FileWriter) writeByConfig(config *FileConfig, loggerMsg *loggerMessage) error {}
+    func (fw *FileWriter) sliceByDate(dataSlice string) error {}
+    等方法  
+    
+**从这一点来说，两个底层Writer就是高度不一致的，因此才需要设计两个对应的Adapter结构类来封装他们，并设计统一的方法让更高层调用时拥有接口的超集特性**  
+**也可以说，还是要理解适配器的本质，适配器的实现方式并不是必须设计一个新结构类包含一个旧接口，包含一个旧结构体也是可以的**
+  
 **主逻辑差不多就是这样，先写这么多**
