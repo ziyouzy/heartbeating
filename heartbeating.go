@@ -1,14 +1,3 @@
-package heartbeating
-
-import (
-	logger "github.com/phachon/go-logger"
-
-	"heartbeating/conf"
-	"heartbeating/log"
-
-	"fmt"
-	"strconv"
-)
 
 /** HeartBeating不仅仅可以用作tcp的心跳包，其他的链接类型，如果有长连接需求也适用
  * 具体的使用方式是，当外层完成通过net.Conn封装自定义Conn时后，将自定义Conn作为参数传入Handler方法
@@ -23,6 +12,21 @@ import (
  * 这样就可以把心跳包逻辑从整体套接字通信逻辑中抽离出来
  * 同时，ZYHB是个单例，他的Handler可以分别应用于多个自定义conn，自定义conn的内部是tcp，udp，snmp也都是可以的
  */
+
+ 
+package heartbeating
+
+import (
+	logger "github.com/phachon/go-logger"
+
+	"heartbeating/conf"
+	"heartbeating/log"
+
+	"fmt"
+	"strconv"
+)
+
+
 type HeartBeatHandler HeartBeating
 func HeartBeating(l *go_logger.Logger){
 	defer ConfFlush()
