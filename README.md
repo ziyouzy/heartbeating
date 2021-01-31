@@ -3,7 +3,46 @@
 因此需要实现一个简单且稳定的长连接工具包  
 此工具包会分为客户端与服务端  
 
-**此包应该是隶属一个底层基于net.Conn接口所实现封装结构类的，一个类似适配器的东西**    
+2021年1月30号，关于可能会存在的与zadapter包的交叉引入问题：
+需要引入zadapter包config接口作为Init(zadapter.Config)的参数，**同时zadapter也需要引入此包来实现map[string]triggerAbsFunc的预加载工作**
+同时目前看来同样引入的还会有zconn包作为核心结构类的内部字段，**同时zconn也需要引入此包在适合的位置传入字节切片HeartBeating.ToDo(sl)**  
+
+**解决这个问题的核心在于，如何让heartbreating包100%作为zadapter包的底层，设计思路引燃存在于phachon/go-logger中:**  
+phachon/go-logger/console.go第60~70行：  
+
+    func NewAdapterConsole() LoggerAbstract {
+	consoleWrite := &ConsoleWriter{
+		writer: os.Stdout,
+	}
+	config := &ConsoleConfig{}
+	return &AdapterConsole{
+		write:  consoleWrite,
+		config: config,
+	}
+    }
+    
+这里其实等同于zadapter/bytesabs/trigger.go的位置，可以写一个NewHeartBeating() TriggerAbstract{}  
+于是也就是在trigger.go引入package heartbreating，并模仿phachon/go-logger/console.go第137~139（末尾）行  
+
+    func init() {
+	Register(CONSOLE_ADAPTER_NAME, NewAdapterConsole)
+    }
+    
+为heartbreating完成预加载函数的注册  
+**这样一来问题就解决了一半**  
+
+接下来的问题是heartbeating内是否必须使用zconn包，客观逻辑上，从减少资源耗费与逻辑复杂度的层面上讲是不好的  
+**但是对于ToDo函数来说，需要再去设计返回值，toDo是zadapter层接口所包含的方法字段，也是zadapter底层功能结构类所属的方法**  
+**在zconn中直接调用接口的内部字段等同于调用底层结构类的方法，从而获得返回值**  
+目前看来这种设计思路是可行的，因为即使heartbreating心跳包的ToDo可以勉强实现无返回值  
+但是以后肯定会去设计将字节切片进行转换transfmer的适配器，到那时即使可以通过传入切片的引用直接改变原始切片值，但是很可能也会有第二个范围转换是否成功的返回值  
+所以heartbreating设计返回值是大势所趋，长远看来而并不会是一种特例
+
+**~~此包应该是隶属一个底层基于net.Conn接口所实现封装结构类的，~~一个类似适配器的东西**   
+**会尽可能设计成适配器模式，此适配器的核心结构类内部会拥有zconn.ZConn的接口对象实体**  
+**目的在于操控ZConn的预警与销毁工作，如当心跳包发现连接响应超时时，必然会伴随对连接的销毁**  
+**目前的思路时在此包(package heartbeating)内进行销毁/析构工作**
+
 **我要先设计出个这结构类的demo才能开拓思路：**   
 
 	github.com/ziyouzy/zconn/
